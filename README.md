@@ -1,7 +1,3 @@
-# work12_final
-Xinyi Huang
-
-Features:
-- mesh
-- lights
-- save_coordinate_system
+Xinyi Huang Period 4
+- mesh: reads the points and generate an image based on that
+	- mesh :filename

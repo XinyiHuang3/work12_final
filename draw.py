@@ -20,6 +20,7 @@ def draw_scanline(x0, z0, x1, z1, y, screen, zbuffer, color):
         x+= 1
         z+= delta_z
 
+
 def scanline_convert(polygons, i, screen, zbuffer, color):
     flip = False
     BOT = 0
@@ -76,19 +77,44 @@ def add_polygon( polygons, x0, y0, z0, x1, y1, z1, x2, y2, z2 ):
     add_point(polygons, x1, y1, z1)
     add_point(polygons, x2, y2, z2)
 
+def create_norms(polygons):
+    norms=dict()
+    if len(polygons) < 2:
+        print 'Need at least 3 points to make a face'
+        return
+
+    point = 0
+    while point < len(polygons) - 2:
+        normal = calculate_normal(polygons, point)[:]
+        for x in range(3):
+            if tuple(polygons[point+x]) in norms:
+                norms[tuple(polygons[point+x])][0]+=normal[0]
+                norms[tuple(polygons[point+x])][1]+=normal[1]
+                norms[tuple(polygons[point+x])][2]+=normal[2]
+            else:
+                norms[tuple(polygons[point+x])]=normal[:]
+        point+= 3
+    for key in norms:
+        if not (norms[key][0] == 0 and norms[key][1] == 0 and norms[key][2] == 0):
+            normalize(norms[key])
+    return norms
+
+    
 def draw_polygons( polygons, screen, zbuffer, view, ambient, light, symbols, reflect):
     if len(polygons) < 2:
         print 'Need at least 3 points to draw'
         return
 
     point = 0
+    norms = create_norms(polygons)
     while point < len(polygons) - 2:
 
         normal = calculate_normal(polygons, point)[:]
-
+        
+        
         #print normal
         if normal[2] > 0:
-
+            
             color = get_lighting(normal, view, ambient, light, symbols, reflect )
             scanline_convert(polygons, point, screen, zbuffer, color)
 
@@ -114,8 +140,54 @@ def draw_polygons( polygons, screen, zbuffer, view, ambient, light, symbols, ref
             #            polygons[point+2][2],
             #            screen, zbuffer, color)
         point+= 3
+    return norms
 
 
+def add_mesh( polygons, meshfile ):
+    vertices=[None]
+    faces=[]
+    a=open(meshfile+'.obj','r')
+    f=a.read()
+    a.close()
+    f=f.strip()
+    lines=f.split('\n')
+    for x in range(len(lines)):
+        lines[x]=lines[x].split(' ')
+        if lines[x][0]=='v':
+            vertices.append([lines[x][1], lines[x][2], lines[x][3]])
+        if lines[x][0]=='f':
+            face=[]
+            for y in range(1,len(lines[x])):
+                face.append(lines[x][y])
+            faces.append(face)
+    for x in faces:
+        if len(x)==3:
+            x0=float(vertices[int(x[0])][0])
+            y0=float(vertices[int(x[0])][1])
+            z0=float(vertices[int(x[0])][2])
+            x1=float(vertices[int(x[1])][0])
+            y1=float(vertices[int(x[1])][1])
+            z1=float(vertices[int(x[1])][2])
+            x2=float(vertices[int(x[2])][0])
+            y2=float(vertices[int(x[2])][1])
+            z2=float(vertices[int(x[2])][2])
+            add_polygon(polygons, x0, y0, z0, x1, y1, z1, x2, y2, z2)
+        else:
+            x0=float(vertices[int(x[0])][0])
+            y0=float(vertices[int(x[0])][1])
+            z0=float(vertices[int(x[0])][2])
+            x1=float(vertices[int(x[1])][0])
+            y1=float(vertices[int(x[1])][1])
+            z1=float(vertices[int(x[1])][2])
+            x2=float(vertices[int(x[2])][0])
+            y2=float(vertices[int(x[2])][1])
+            z2=float(vertices[int(x[2])][2])
+            x3=float(vertices[int(x[3])][0])
+            y3=float(vertices[int(x[3])][1])
+            z3=float(vertices[int(x[3])][2])
+            add_polygon(polygons, x0, y0, z0, x1, y1, z1, x2, y2, z2)
+            add_polygon(polygons, x0, y0, z0, x2, y2, z2, x3, y3, z3)
+        
 def add_box( polygons, x, y, z, width, height, depth ):
     x1 = x + width
     y1 = y - height
